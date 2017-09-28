@@ -37,7 +37,7 @@ public class HDTvsJena {
 	private static Dataset jenaTripleDataset;
 	
 	private static final String BASE_URI = "http://example.com/3.5";
-	private static final String FOLDER = "/home/javi/git/hdtVersions/tests/";
+	private static final String FOLDER = "data/jUnitTestData/";
 	
 	private static final String QUAD_INPUT = FOLDER + "quad20.nq";
 	//private static final String QUAD_INPUT = FOLDER + "bear.nq";
