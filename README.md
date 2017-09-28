@@ -1,6 +1,6 @@
 [![Join the chat at https://gitter.im/rdfhdt](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/rdfhdt)
 
-# HDTQ Library, Java Implementation. An extension of HDT that supports named graphs. http://www.rdfhdt.org
+# HDTQ Library, Java Implementation. Extension of HDT. http://www.rdfhdt.org
 
 ## Overview
 
