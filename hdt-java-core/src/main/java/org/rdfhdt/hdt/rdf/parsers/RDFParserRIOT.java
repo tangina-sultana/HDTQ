@@ -44,7 +44,9 @@ import org.apache.jena.sparql.core.Quad;
 import org.rdfhdt.hdt.enums.RDFNotation;
 import org.rdfhdt.hdt.exceptions.NotImplementedException;
 import org.rdfhdt.hdt.exceptions.ParserException;
+import org.rdfhdt.hdt.quads.QuadString;
 import org.rdfhdt.hdt.rdf.RDFParserCallback;
+import org.rdfhdt.hdt.rdf.RDFParserCallback.RDFCallback;
 import org.rdfhdt.hdt.triples.TripleString;
 
 /**
@@ -53,7 +55,7 @@ import org.rdfhdt.hdt.triples.TripleString;
  */
 public class RDFParserRIOT implements RDFParserCallback, StreamRDF {
 	private RDFCallback callback;
-	private TripleString triple = new TripleString();
+	private TripleString triple;
 	
 	/* (non-Javadoc)
 	 * @see hdt.rdf.RDFParserCallback#doParse(java.lang.String, java.lang.String, hdt.enums.RDFNotation, hdt.rdf.RDFParserCallback.Callback)
@@ -80,6 +82,12 @@ public class RDFParserRIOT implements RDFParserCallback, StreamRDF {
 				case N3:
 				case TURTLE:
 					RDFDataMgr.parse(this, input, baseUri, Lang.TURTLE);
+					break;
+				case NQUADS:
+					RDFDataMgr.parse(this, input, baseUri, Lang.NQUADS);
+					break;
+				case TRIG:
+					RDFDataMgr.parse(this, input, baseUri, Lang.TRIG);
 					break;
 				default:
 					throw new NotImplementedException("Parser not found for format "+notation);	
@@ -122,14 +130,20 @@ public class RDFParserRIOT implements RDFParserCallback, StreamRDF {
 
      @Override
      public void triple(Triple parsedTriple) {
+    	 if (triple == null) {
+    		 triple = new TripleString();
+    	 }
              triple.setAll(parsedTriple.getSubject().toString(), parsedTriple.getPredicate().toString(), parsedTriple.getObject().toString());
              callback.processTriple(triple, 0);              
      }
 
      @Override
      public void quad(Quad quad) {
-             triple.setAll(quad.getSubject().toString(), quad.getPredicate().toString(), quad.getObject().toString());
-             callback.processTriple(triple, 0);              
+    	 if (triple == null) {
+    		 triple = new QuadString();
+    	 }
+         ((QuadString) triple).setAll(quad.getSubject().toString(), quad.getPredicate().toString(), quad.getObject().toString(), quad.getGraph().toString());
+         callback.processQuad((QuadString) triple, 0);
      }
 
      @Override

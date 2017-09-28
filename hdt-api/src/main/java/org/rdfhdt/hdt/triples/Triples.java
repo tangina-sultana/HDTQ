@@ -29,7 +29,9 @@ package org.rdfhdt.hdt.triples;
 
 import java.io.Closeable;
 
+import org.rdfhdt.hdt.graphs.GraphInformation;
 import org.rdfhdt.hdt.header.Header;
+import org.rdfhdt.hdt.quads.QuadID;
 
 /**
  * Interface for Triples implementation.
@@ -51,6 +53,16 @@ public interface Triples extends Closeable {
 	 * 
 	 */
 	IteratorTripleID search(TripleID pattern);
+	
+	/**
+	 * Iterates over all quads that match the pattern.
+	 * 
+	 * @param pattern The pattern to match against
+	 * @param graphs The graphinformation
+	 * @return IteratorTripleID 
+	 * 
+	 */
+	IteratorTripleID search(QuadID pattern, GraphInformation graphs);
 	
 	/**
 	 * Returns the total number of triples

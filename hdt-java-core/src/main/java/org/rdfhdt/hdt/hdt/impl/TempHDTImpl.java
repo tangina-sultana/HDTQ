@@ -32,6 +32,7 @@ import java.io.IOException;
 import org.rdfhdt.hdt.dictionary.DictionaryFactory;
 import org.rdfhdt.hdt.dictionary.TempDictionary;
 import org.rdfhdt.hdt.enums.TripleComponentRole;
+import org.rdfhdt.hdt.graphs.GraphInformationImpl;
 import org.rdfhdt.hdt.hdt.TempHDT;
 import org.rdfhdt.hdt.header.Header;
 import org.rdfhdt.hdt.header.HeaderFactory;
@@ -49,6 +50,7 @@ public class TempHDTImpl implements TempHDT {
 	protected Header header;
 	protected TempDictionary dictionary;
 	protected TempTriples triples;
+	protected GraphInformationImpl graphs;
 
 	protected String baseUri;
 	
@@ -64,6 +66,9 @@ public class TempHDTImpl implements TempHDT {
 		this.header = HeaderFactory.createHeader(spec);
 		this.dictionary = DictionaryFactory.createTempDictionary(spec);
 		this.triples = TriplesFactory.createTempTriples(spec);
+		if(spec.getInt("triples.components.count") == 4) {
+			this.graphs = new GraphInformationImpl(spec);
+		}
 	}
 	
 	@Override
@@ -79,6 +84,11 @@ public class TempHDTImpl implements TempHDT {
 	@Override
 	public TempTriples getTriples() {
 		return triples;
+	}
+	
+	@Override
+	public GraphInformationImpl getGraphs() {
+		return graphs;
 	}
 
 	public void insert(CharSequence subject, CharSequence predicate, CharSequence object) {
@@ -139,7 +149,12 @@ public class TempHDTImpl implements TempHDT {
 		// Sort and remove duplicates.
 		//StopWatch sortDupTime = new StopWatch();
 		triples.sort(listener);
-		triples.removeDuplicates(listener);
+		if(graphs == null) {
+			triples.removeDuplicates(listener);
+		} else {
+			triples.removeDuplicates(graphs, listener);
+		}
+		
 		//System.out.println("Sort triples and remove duplicates: "+sortDupTime.stopAndShow());
 
 		isOrganized = true;

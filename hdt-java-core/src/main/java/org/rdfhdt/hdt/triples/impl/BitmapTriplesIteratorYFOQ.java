@@ -31,7 +31,6 @@ import org.rdfhdt.hdt.compact.bitmap.AdjacencyList;
 import org.rdfhdt.hdt.compact.sequence.DeflateIntegerIterator;
 import org.rdfhdt.hdt.enums.ResultEstimationType;
 import org.rdfhdt.hdt.enums.TripleComponentOrder;
-import org.rdfhdt.hdt.exceptions.NotImplementedException;
 import org.rdfhdt.hdt.triples.IteratorTripleID;
 import org.rdfhdt.hdt.triples.TripleID;
 
@@ -44,23 +43,30 @@ import org.rdfhdt.hdt.triples.TripleID;
  *
  */
 public class BitmapTriplesIteratorYFOQ implements IteratorTripleID {
-		private BitmapTriples triples;
-		private TripleID pattern, returnTriple;
-		private int patY;
+	protected BitmapTriples triples; // access to the TripleIDs and PredicateIndex
+		protected TripleID pattern, returnTriple;
+		protected int patY; // pattern of the search
 		
-		private AdjacencyList adjY, adjZ;
-		private long posY, posZ;
-		private long prevZ, nextZ, maxZ;
-		private int x, y, z;
+		protected AdjacencyList adjY, adjZ; // adjacency list of Predicates (Y) and Objects (Z). That is, adjY contains all predicates for each subject. AdjZ contains all objects for each pair (subject, predicate)
+		protected long posY, posZ; // current position of the predicate (posY), object (posZ). 
+		protected long prevZ, nextZ, maxZ; //boundaries
+		protected int x, y, z; // current solution, S=X, P=Y and O=Z
 		
-		private long numOccurrences, numOccurrence;
+		protected long numOccurrences, numOccurrence;
 		
 		DeflateIntegerIterator index;
 		
-		BitmapTriplesIteratorYFOQ(BitmapTriples triples, TripleID pattern) {
+		protected BitmapTriplesIteratorYFOQ() { }
+		
+		protected BitmapTriplesIteratorYFOQ(BitmapTriples triples, TripleID pattern) {
 			this.triples = triples;
-			this.pattern = new TripleID(pattern);
+			this.pattern = new TripleID();
 			this.returnTriple = new TripleID();
+			newSearch(pattern);
+		}
+		
+		protected void newSearch(TripleID pattern) {
+			this.pattern.assign(pattern);
 			
 			TripleOrderConvert.swapComponentOrder(this.pattern, TripleComponentOrder.SPO, triples.order);
 			patY = this.pattern.getPredicate();
@@ -71,19 +77,22 @@ public class BitmapTriplesIteratorYFOQ implements IteratorTripleID {
 			adjY = new AdjacencyList(triples.seqY, triples.bitmapY);
 			adjZ = new AdjacencyList(triples.seqZ, triples.bitmapZ);
 			
-			numOccurrences = triples.predicateIndex.getNumOcurrences(patY);
-			maxZ = triples.adjZ.getNumberOfElements();
-			
+			findRange();
 			goToStart();
 		}
 		
-		private void updateOutput() {
+		protected void findRange() {
+			numOccurrences = triples.predicateIndex.getNumOcurrences(patY);
+			maxZ = triples.adjZ.getNumberOfElements();
+		}
+		
+		protected void updateOutput() {
 			returnTriple.setAll(x, y, z);
 			TripleOrderConvert.swapComponentOrder(returnTriple, triples.order, TripleComponentOrder.SPO);
 		}
 		
-		/* (non-Javadoc)
-		 * @see hdt.iterator.IteratorTripleID#hasNext()
+		/* 
+		 * Check if there are more solution
 		 */
 		@Override
 		public boolean hasNext() {
@@ -91,29 +100,27 @@ public class BitmapTriplesIteratorYFOQ implements IteratorTripleID {
 		}
 		
 		
-		/* (non-Javadoc)
-		 * @see hdt.iterator.IteratorTripleID#next()
+		/* 
+		 * Get the next solution
 		 */
 		@Override
 		public TripleID next() {	
-			if(posZ>nextZ) {
-				numOccurrence++;
-				posY = triples.predicateIndex.getOccurrence(patY, numOccurrence);
+			if(posZ>nextZ) {  // if, with the current position of the object (posZ), we have reached the next list of objects (starting in nexZ), then we should update the associated predicate (Y) and, potentially, also the associated subject (X)
+				numOccurrence++; // increase the number of occurrence of the predicate
+				posY = triples.predicateIndex.getOccurrence(patY, numOccurrence); // get the position of the next occurrence of the predicate in AdjY 
 				
-				posZ = prevZ = adjZ.find(posY);
-				nextZ = adjZ.last(posY); 
+				posZ = prevZ = adjZ.find(posY); // current position of the object, associated to the list posY
+				nextZ = adjZ.last(posY);  // update nextZ, storing in which position (in adjZ) ends the list of objects associated with the current subject,predicate  
 				
-				x = (int) adjY.findListIndex(posY)+1;
-				y = (int) adjY.get(posY);
-	 			z = (int) adjZ.get(posZ);
-			} else {
-				z = (int) adjZ.get(posZ);
+				x = (int) adjY.findListIndex(posY)+1;  // get the next subject (X)
+				y = (int) adjY.get(posY);  // get the next predicate (Y)
 			}
-			posZ++;	
+			z = (int) adjZ.get(posZ); // get the next object (Z)
+			posZ++;	// increase the position where the next object can be found.
 		
-			updateOutput();
+			updateOutput(); // set the components (subject,predicate,object) of the returned triple
 			
-			return returnTriple;
+			return returnTriple; // return the triple as solution
 		}
 
 		/* (non-Javadoc)
@@ -149,20 +156,20 @@ public class BitmapTriplesIteratorYFOQ implements IteratorTripleID {
 			return returnTriple;
 		}
 
-		/* (non-Javadoc)
-		 * @see hdt.iterator.IteratorTripleID#goToStart()
+		/* 
+		 * load the first solution and position the next pointers
 		 */
 		@Override
 		public void goToStart() {
 			numOccurrence = 1;
-			posY = triples.predicateIndex.getOccurrence(patY, numOccurrence);
+			posY = triples.predicateIndex.getOccurrence(patY, numOccurrence); // get the position of the first occurrence of the predicate in AdjY
 			
-			posZ = prevZ = adjZ.find(posY);
-			nextZ = adjZ.last(posY);
+			posZ = prevZ = adjZ.find(posY); // current position of the object, associated to the list posY
+			nextZ = adjZ.last(posY); // update nextZ, storing in which position (in adjZ) ends the list of objects associated with the current subject,predicate  
 			
-			x = (int) adjY.findListIndex(posY)+1;
-			y = (int) adjY.get(posY);
-	        z = (int) adjZ.get(posZ);
+			x = (int) adjY.findListIndex(posY)+1; // get the next subject (X)
+			y = (int) adjY.get(posY); // get the next predicate (Y)
+	        z = (int) adjZ.get(posZ); // get the next object (Z)
 		}
 
 		/* (non-Javadoc)
@@ -213,5 +220,20 @@ public class BitmapTriplesIteratorYFOQ implements IteratorTripleID {
 		@Override
 		public void remove() {
 			throw new UnsupportedOperationException();
+		}
+		
+		@Override
+		public long getNextTriplePosition() {
+			if(posZ>nextZ) {
+				long tempNumOccurrence = numOccurrence+1;
+				long tempposY = triples.predicateIndex.getOccurrence(patY, tempNumOccurrence);
+				return adjZ.find(tempposY); 
+			}
+			else
+				return posZ;
+		}
+		@Override
+		public long getPreviousTriplePosition() {
+			return posZ-1;
 		}
 }

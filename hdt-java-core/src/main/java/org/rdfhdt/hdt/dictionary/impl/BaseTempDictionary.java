@@ -53,6 +53,7 @@ public abstract class BaseTempDictionary implements TempDictionary {
 	protected TempDictionarySection predicates;
 	protected TempDictionarySection objects;
 	protected TempDictionarySection shared;
+	protected TempDictionarySection graphs;
 
 	public BaseTempDictionary(HDTOptions spec) {
 		this.spec = spec;
@@ -73,6 +74,9 @@ public abstract class BaseTempDictionary implements TempDictionary {
 		case OBJECT:
 			isOrganized = false;
 			return ((TempDictionarySection)objects).add(str);
+		case GRAPH:
+			isOrganized = false;
+			return ((TempDictionarySection)graphs).add(str);
 		default:
 			throw new IllegalArgumentException();
 		}
@@ -154,6 +158,11 @@ public abstract class BaseTempDictionary implements TempDictionary {
 		return shared;
 	}
 	
+	@Override
+	public TempDictionarySection getGraphs() {
+		return graphs;
+	}
+	
 	protected int getGlobalId(int id, DictionarySectionRole position) {
 		switch (position) {
 		case SUBJECT:
@@ -204,6 +213,12 @@ public abstract class BaseTempDictionary implements TempDictionary {
 			ret = objects.locate(str);
 			if(ret!=0) {
 				return getGlobalId(ret, DictionarySectionRole.OBJECT);
+			}
+			return -1;
+		case GRAPH:
+			ret = graphs.locate(str);
+			if(ret!=0) {
+				return ret;
 			}
 			return -1;
 		default:

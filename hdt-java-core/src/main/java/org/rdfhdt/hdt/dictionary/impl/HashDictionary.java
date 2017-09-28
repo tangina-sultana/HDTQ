@@ -34,6 +34,7 @@ import org.rdfhdt.hdt.dictionary.TempDictionarySection;
 import org.rdfhdt.hdt.dictionary.impl.section.HashDictionarySection;
 import org.rdfhdt.hdt.enums.TripleComponentRole;
 import org.rdfhdt.hdt.options.HDTOptions;
+import org.rdfhdt.hdt.quads.QuadID;
 import org.rdfhdt.hdt.triples.TempTriples;
 import org.rdfhdt.hdt.triples.TripleID;
 import org.rdfhdt.hdt.util.StopWatch;
@@ -52,6 +53,7 @@ public class HashDictionary extends BaseTempDictionary {
 		predicates = new HashDictionarySection();
 		objects = new HashDictionarySection();
 		shared = new HashDictionarySection();
+		graphs = new HashDictionarySection();
 	}
 	
 	/* (non-Javadoc)
@@ -62,6 +64,7 @@ public class HashDictionary extends BaseTempDictionary {
 		DictionaryIDMapping mapSubj = new DictionaryIDMapping(subjects.getNumberOfElements());
 		DictionaryIDMapping mapPred = new DictionaryIDMapping(predicates.getNumberOfElements());
 		DictionaryIDMapping mapObj = new DictionaryIDMapping(objects.getNumberOfElements());
+		DictionaryIDMapping mapGraph = new DictionaryIDMapping(graphs.getNumberOfElements());
 		
 		StopWatch st = new StopWatch();
 		
@@ -93,6 +96,13 @@ public class HashDictionary extends BaseTempDictionary {
 			mapObj.add(str);
 		}
 		
+		// Generate old graph mapping
+		Iterator<? extends CharSequence> itGraph = ((TempDictionarySection) graphs).getEntries();
+		while(itGraph.hasNext()) {
+			CharSequence str = itGraph.next();
+			mapGraph.add(str);
+		}
+		
 		// Remove shared from subjects and objects
 		Iterator<? extends CharSequence> itShared = ((TempDictionarySection) shared).getEntries();
 		while(itShared.hasNext()) {
@@ -108,6 +118,7 @@ public class HashDictionary extends BaseTempDictionary {
 		((TempDictionarySection)predicates).sort();
 		((TempDictionarySection)objects).sort();
 		((TempDictionarySection)shared).sort();
+		((TempDictionarySection)graphs).sort();
 		//System.out.println("Sections sorted in "+ st.stopAndShow());
 		
 		// Update mappings with new IDs
@@ -126,6 +137,11 @@ public class HashDictionary extends BaseTempDictionary {
 			mapObj.setNewID(j, this.stringToId(mapObj.getString(j), TripleComponentRole.OBJECT));
 			//System.out.print("Obj Old id: "+(j+1) + " New id: "+ mapObj.getNewID(j)+ " STR: "+mapObj.getString(j));
 		}
+		
+		for(int j=0;j<mapGraph.size();j++) {
+			mapGraph.setNewID(j, this.stringToId(mapGraph.getString(j), TripleComponentRole.GRAPH));
+			//System.out.print("Obj Old id: "+(j+1) + " New id: "+ mapObj.getNewID(j)+ " STR: "+mapObj.getString(j));
+		}
 		//System.out.println("Update mappings in "+st.stopAndShow());
 		 
 		// Replace old IDs with news
@@ -133,11 +149,21 @@ public class HashDictionary extends BaseTempDictionary {
 		Iterator<TripleID> iteratorTriples = triples.searchAll();
 		while(iteratorTriples.hasNext()) {
 			TripleID triple = iteratorTriples.next();
-			triples.update(triple, 
-					mapSubj.getNewID(triple.getSubject()-1),
-					mapPred.getNewID(triple.getPredicate()-1),
-					mapObj.getNewID(triple.getObject()-1)
-			);
+			if(triple instanceof QuadID) {
+				triples.update((QuadID) triple, 
+						mapSubj.getNewID(triple.getSubject()-1),
+						mapPred.getNewID(triple.getPredicate()-1),
+						mapObj.getNewID(triple.getObject()-1),
+						mapGraph.getNewID(((QuadID)triple).getGraph()-1)
+				);
+			} else {
+				triples.update(triple, 
+						mapSubj.getNewID(triple.getSubject()-1),
+						mapPred.getNewID(triple.getPredicate()-1),
+						mapObj.getNewID(triple.getObject()-1)
+				);
+			}
+			
 		}
 		//System.out.println("Replace IDs in "+st.stopAndShow());
 		

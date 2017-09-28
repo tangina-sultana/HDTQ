@@ -55,6 +55,11 @@ public enum ResultEstimationType {
 	/**
 	 * The number of results is unknown, but should be more than the specified value.
 	 */
-	MORE_THAN
+	MORE_THAN,
+	
+	/**
+	 * The number of results is unknown, but should be same or more than the specified value.
+	 */
+	EQUAL_OR_MORE_THAN,
 	
 }

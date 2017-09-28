@@ -38,6 +38,11 @@ import java.io.OutputStream;
  *
  */
 public interface Bitmap {
+	
+	enum BitmapType {
+		TYPE_BITMAP_PLAIN,
+		TYPE_BITMAP_ROAR
+	}
 	/**
 	 * Get the value of the bit at position pos
 	 * @param pos

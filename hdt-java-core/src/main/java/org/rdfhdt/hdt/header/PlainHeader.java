@@ -38,12 +38,14 @@ import java.util.List;
 
 import org.rdfhdt.hdt.enums.RDFNotation;
 import org.rdfhdt.hdt.exceptions.IllegalFormatException;
+import org.rdfhdt.hdt.exceptions.NotImplementedException;
 import org.rdfhdt.hdt.exceptions.ParserException;
 import org.rdfhdt.hdt.hdt.HDTVocabulary;
 import org.rdfhdt.hdt.listener.ProgressListener;
 import org.rdfhdt.hdt.options.ControlInfo;
 import org.rdfhdt.hdt.options.HDTOptions;
 import org.rdfhdt.hdt.options.HDTSpecification;
+import org.rdfhdt.hdt.quads.QuadString;
 import org.rdfhdt.hdt.rdf.RDFParserCallback.RDFCallback;
 import org.rdfhdt.hdt.rdf.parsers.RDFParserSimple;
 import org.rdfhdt.hdt.triples.IteratorTripleString;
@@ -152,10 +154,19 @@ public class PlainHeader implements HeaderPrivate, RDFCallback {
 		TripleString pattern = new TripleString(subject.toString(), predicate.toString(), object.toString());
 		return new PlainHeaderIterator(this, pattern);
 	}
+	
+	public IteratorTripleString search(CharSequence subject, CharSequence predicate, CharSequence object, CharSequence graph) {
+		throw new NotImplementedException();
+	}
 
 	@Override
 	public void processTriple(TripleString triple, long pos) {
 		triples.add(new TripleString(triple));
+	}
+	
+	@Override
+	public void processQuad(QuadString quad, long pos) {
+		triples.add(new QuadString(quad));
 	}
 
 	@Override

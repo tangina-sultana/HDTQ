@@ -30,6 +30,7 @@ package org.rdfhdt.hdt.triples.impl;
 import org.rdfhdt.hdt.compact.bitmap.AdjacencyList;
 import org.rdfhdt.hdt.enums.ResultEstimationType;
 import org.rdfhdt.hdt.enums.TripleComponentOrder;
+import org.rdfhdt.hdt.exceptions.NotFoundException;
 import org.rdfhdt.hdt.triples.IteratorTripleID;
 import org.rdfhdt.hdt.triples.TripleID;
 
@@ -38,19 +39,26 @@ import org.rdfhdt.hdt.triples.TripleID;
  *
  */
 public class BitmapTriplesIteratorZFOQ implements IteratorTripleID {
-	BitmapTriples triples;
-	TripleID pattern, returnTriple;
+	protected BitmapTriples triples; // access to the TripleIDs
+	protected TripleID pattern, returnTriple;
 	
-	AdjacencyList adjY, adjIndex;
-	long posIndex, minIndex, maxIndex;
-	int x, y, z;
+	protected AdjacencyList adjY, adjIndex; // adjacency list of Predicates (Y)
+	protected long posIndex, minIndex, maxIndex; //boundaries
+	protected int x, y, z; // current solution, S=X, P=Y and O=Z
 	
-	int patY, patZ;
+	protected int patY, patZ; // patterns of the search
+	
+	protected BitmapTriplesIteratorZFOQ() { }
 	
 	public BitmapTriplesIteratorZFOQ(BitmapTriples triples, TripleID pattern) {
 		this.triples = triples;
-		this.pattern = new TripleID(pattern);
+		this.pattern = new TripleID();
 		this.returnTriple = new TripleID();
+		newSearch(pattern);
+	}
+	
+	protected void newSearch(TripleID pattern) {
+		this.pattern.assign(pattern);
 		
 		TripleOrderConvert.swapComponentOrder(this.pattern, TripleComponentOrder.SPO, triples.order);
 		patZ = this.pattern.getObject();
@@ -61,35 +69,38 @@ public class BitmapTriplesIteratorZFOQ implements IteratorTripleID {
 	    patY = this.pattern.getPredicate();
 		
 		adjY = triples.adjY;
-		adjIndex = triples.adjIndex;
+		adjIndex = triples.adjIndex; // adjIndex has the list of positions in adY 
 		
-		calculateRange();
-		goToStart();
+		findRange(); // get the boundaries where the solution for the given object can be found
+		goToStart(); // load the first solution and position the next pointers
 	}
 	
+	/*
+	 * Get the predicate associated to a given position in the object index
+	 */
 	private long getY(long index) {
 		return adjY.get(adjIndex.get(index));
 	}
 	
-	private void calculateRange() {
-		if(patZ==0) {
+	protected void findRange() {
+		if(patZ==0) { //if the object is not provided (usually it is in this iterator)
 			minIndex = 0;
 			maxIndex = adjIndex.getNumberOfElements();
 			return;
 		}
-		minIndex = adjIndex.find(patZ-1);
-		maxIndex = adjIndex.last(patZ-1);
+		minIndex = adjIndex.find(patZ-1); //find the position of the first occurrence of the object
+		maxIndex = adjIndex.last(patZ-1); //find the position of the last ocurrence of the object
 
-		if(patY!=0) {
+		if(patY!=0) { // if the predicate is provided then we do a binary search to search for such predicate
 			while (minIndex <= maxIndex) {
 				long mid = (minIndex + maxIndex) / 2;
-				long predicate=getY(mid);        
+				long predicate=getY(mid);  //get predicate at mid position in the object index     
 
 				if (patY > predicate) {
 					minIndex = mid + 1;
 				} else if (patY < predicate) {
 					maxIndex = mid - 1;
-				} else {
+				} else { // the predicate has been found, now we have to find the min and max limits (the predicate P is repeated for each PO occurrence in the triples)
 					// Binary Search to find left boundary
 					long left=minIndex;
 					long right=mid;
@@ -130,34 +141,34 @@ public class BitmapTriplesIteratorZFOQ implements IteratorTripleID {
 		}
 	}
 	
-	private void updateOutput() {
+	protected void updateOutput() {
 		returnTriple.setAll(x, y, z);
 		TripleOrderConvert.swapComponentOrder(returnTriple, triples.order, TripleComponentOrder.SPO);
 	}
 	
-	/* (non-Javadoc)
-	 * @see hdt.iterator.IteratorTripleID#hasNext()
+	/* 
+	 * Check if there are more solution
 	 */
 	@Override
 	public boolean hasNext() {
 		return posIndex<=maxIndex;
 	}
 	
-	/* (non-Javadoc)
-	 * @see hdt.iterator.IteratorTripleID#next()
+	/* 
+	 * Get the next solution
 	 */
 	@Override
 	public TripleID next() {
-	    long posY = adjIndex.get(posIndex);
+	    long posY = adjIndex.get(posIndex); // get the position of the next occurrence of the predicate in AdjY
 
-	    z = patZ!=0 ? patZ : (int)adjIndex.findListIndex(posIndex)+1;
-	    y = patY!=0 ? patY : (int) adjY.get(posY);
-	    x = (int) adjY.findListIndex(posY)+1;
+	    z = patZ!=0 ? patZ : (int)adjIndex.findListIndex(posIndex)+1; //get the next object (z) as the number of list in adIndex corresponding to posIndex
+	    y = patY!=0 ? patY : (int) adjY.get(posY); // get the next predicate (y) as the element in adjY stores in position posY
+	    x = (int) adjY.findListIndex(posY)+1; //get the next subject (X) as the number of list in adjY corresponding to posY
 
-	    posIndex++;
+	    posIndex++; // increase the position of the next occurrence of the predicate
 
-	    updateOutput();
-	    return returnTriple;
+	    updateOutput(); // set the components (subject,predicate,object) of the returned triple
+	    return returnTriple; // return the triple as solution
 	}
 
 	/* (non-Javadoc)
@@ -185,8 +196,8 @@ public class BitmapTriplesIteratorZFOQ implements IteratorTripleID {
 		return returnTriple;
 	}
 
-	/* (non-Javadoc)
-	 * @see hdt.iterator.IteratorTripleID#goToStart()
+	/* 
+	 * load the first solution and position the next pointers
 	 */
 	@Override
 	public void goToStart() {
@@ -242,5 +253,26 @@ public class BitmapTriplesIteratorZFOQ implements IteratorTripleID {
 	@Override
 	public void remove() {
 		throw new UnsupportedOperationException();
+	}
+	
+	@Override
+	public long getNextTriplePosition() {
+		long ret =0;
+		try {
+			ret = triples.adjZ.find(adjIndex.get(posIndex),patZ);
+		} catch (NotFoundException e) {
+		}
+				
+		return ret;
+	}
+	@Override
+	public long getPreviousTriplePosition() {
+		long ret =0;
+		try {
+			ret = triples.adjZ.find(adjIndex.get(posIndex-1),patZ);
+		} catch (NotFoundException e) {
+		}
+				
+		return ret;
 	}
 }

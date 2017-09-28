@@ -34,16 +34,20 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 
 import org.rdfhdt.hdt.enums.ResultEstimationType;
 import org.rdfhdt.hdt.enums.TripleComponentOrder;
 import org.rdfhdt.hdt.exceptions.NotImplementedException;
+import org.rdfhdt.hdt.graphs.GraphInformation;
+import org.rdfhdt.hdt.graphs.GraphInformationImpl;
 import org.rdfhdt.hdt.hdt.HDTVocabulary;
 import org.rdfhdt.hdt.header.Header;
 import org.rdfhdt.hdt.iterator.SequentialSearchIteratorTripleID;
 import org.rdfhdt.hdt.listener.ProgressListener;
 import org.rdfhdt.hdt.options.ControlInfo;
 import org.rdfhdt.hdt.options.HDTOptions;
+import org.rdfhdt.hdt.quads.QuadID;
 import org.rdfhdt.hdt.triples.IteratorTripleID;
 import org.rdfhdt.hdt.triples.TempTriples;
 import org.rdfhdt.hdt.triples.TripleID;
@@ -119,6 +123,11 @@ public class TriplesList implements TempTriples {
 		} else {
 			return new SequentialSearchIteratorTripleID(pattern, new TriplesListIterator(this));
 		}
+	}
+	
+	@Override
+	public IteratorTripleID search(QuadID pattern, GraphInformation graphs) {
+		throw new NotImplementedException();
 	}
 
 	/* (non-Javadoc)
@@ -257,13 +266,31 @@ public class TriplesList implements TempTriples {
 		sorted = false;
 		return true;
 	}
-
+	
+	@Override
+	public boolean insert(int subject, int predicate, int object, int graph) {
+		arrayOfTriples.add(new QuadID(subject,predicate,object, graph));
+		numValidTriples++;
+		sorted = false;
+		return true;
+	}
+	
 	@Override
 	public boolean update(TripleID triple, int subj, int pred, int obj) {
 		if (triple==null)
 			return false;
 
 		triple.setAll(subj, pred, obj);
+		sorted = false;
+		return true;
+	}
+
+	@Override
+	public boolean update(QuadID triple, int subj, int pred, int obj, int graph) {
+		if (triple==null)
+			return false;
+
+		triple.setAll(subj, pred, obj, graph);
 		sorted = false;
 		return true;
 	}
@@ -317,7 +344,7 @@ public class TriplesList implements TempTriples {
 		}
 
 		int j = 0;
-
+		
 		for(int i=1; i<arrayOfTriples.size(); i++) {
 			if(arrayOfTriples.get(i).compareTo(arrayOfTriples.get(j))!=0) {
 				j++;
@@ -325,6 +352,44 @@ public class TriplesList implements TempTriples {
 			}
 			ListenerUtil.notifyCond(listener, "Removing duplicate triples", i, arrayOfTriples.size());
 		}
+
+		while(arrayOfTriples.size()>j+1) {
+			arrayOfTriples.remove(arrayOfTriples.size()-1);
+		}
+		arrayOfTriples.trimToSize();
+		numValidTriples = j+1;
+	}
+	
+	/**
+	 * If called while triples not sorted nothing will happen!
+	 */
+	@Override
+	public void removeDuplicates(GraphInformationImpl graphs, ProgressListener listener) {
+		if(arrayOfTriples.size()<=1 || !sorted) {
+			return;
+		}
+
+		if(order==TripleComponentOrder.Unknown || !sorted) {
+			throw new IllegalArgumentException("Cannot remove duplicates unless sorted");
+		}
+
+		int j = 0;
+		
+		HashSet<Integer> graphsOfTriple = new HashSet<Integer>();
+		
+		int i;
+		for(i=1; i<arrayOfTriples.size(); i++) {
+			graphsOfTriple.add(((QuadID) arrayOfTriples.get(i-1)).getGraph());
+			if(arrayOfTriples.get(i).compareTo(arrayOfTriples.get(j))!=0) {
+				j++;
+				arrayOfTriples.set(j, arrayOfTriples.get(i));
+				graphs.load(graphsOfTriple);
+				graphsOfTriple.clear();
+			}
+			ListenerUtil.notifyCond(listener, "Removing duplicate triples", i, arrayOfTriples.size());
+		}
+		graphsOfTriple.add(((QuadID) arrayOfTriples.get(i-1)).getGraph());
+		graphs.load(graphsOfTriple);
 
 		while(arrayOfTriples.size()>j+1) {
 			arrayOfTriples.remove(arrayOfTriples.size()-1);
@@ -498,6 +563,15 @@ public class TriplesList implements TempTriples {
 		@Override
 		public void remove() {
 			throw new UnsupportedOperationException();
+		}
+		
+		@Override
+		public long getNextTriplePosition() {
+			return pos;
+		}
+		@Override
+		public long getPreviousTriplePosition() {
+			return pos--;
 		}
 	}
 

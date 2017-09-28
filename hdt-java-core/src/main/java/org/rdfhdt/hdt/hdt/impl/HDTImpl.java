@@ -29,6 +29,7 @@ package org.rdfhdt.hdt.hdt.impl;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -42,10 +43,12 @@ import org.rdfhdt.hdt.dictionary.Dictionary;
 import org.rdfhdt.hdt.dictionary.DictionaryFactory;
 import org.rdfhdt.hdt.dictionary.DictionaryPrivate;
 import org.rdfhdt.hdt.dictionary.TempDictionary;
-import org.rdfhdt.hdt.enums.ResultEstimationType;
 import org.rdfhdt.hdt.enums.TripleComponentRole;
 import org.rdfhdt.hdt.exceptions.IllegalFormatException;
 import org.rdfhdt.hdt.exceptions.NotFoundException;
+import org.rdfhdt.hdt.graphs.GraphInformation;
+import org.rdfhdt.hdt.graphs.GraphInformationImpl;
+import org.rdfhdt.hdt.graphs.GraphInformationImpl.NumberOfTriplesAccuracy;
 import org.rdfhdt.hdt.hdt.HDTPrivate;
 import org.rdfhdt.hdt.hdt.HDTVersion;
 import org.rdfhdt.hdt.hdt.HDTVocabulary;
@@ -58,10 +61,10 @@ import org.rdfhdt.hdt.listener.ProgressListener;
 import org.rdfhdt.hdt.options.ControlInfo;
 import org.rdfhdt.hdt.options.ControlInformation;
 import org.rdfhdt.hdt.options.HDTOptions;
+import org.rdfhdt.hdt.quads.QuadID;
 import org.rdfhdt.hdt.triples.IteratorTripleString;
 import org.rdfhdt.hdt.triples.TempTriples;
 import org.rdfhdt.hdt.triples.TripleID;
-import org.rdfhdt.hdt.triples.TripleString;
 import org.rdfhdt.hdt.triples.Triples;
 import org.rdfhdt.hdt.triples.TriplesFactory;
 import org.rdfhdt.hdt.triples.TriplesPrivate;
@@ -81,6 +84,7 @@ public class HDTImpl implements HDTPrivate {
 	protected HeaderPrivate header;
 	protected DictionaryPrivate dictionary;
 	protected TriplesPrivate triples;
+	protected GraphInformationImpl graphs;
 
 	private String hdtFileName;
 	private String baseUri;
@@ -90,6 +94,7 @@ public class HDTImpl implements HDTPrivate {
 		header = HeaderFactory.createHeader(spec);
         dictionary = DictionaryFactory.createDictionary(spec);
         triples = TriplesFactory.createTriples(spec);
+        graphs = new GraphInformationImpl(spec);
 	}
 
 	public void populateHeaderStructure(String baseUri) {
@@ -101,6 +106,9 @@ public class HDTImpl implements HDTPrivate {
 		header.insert(baseUri, HDTVocabulary.VOID_PROPERTIES, dictionary.getNpredicates());
 		header.insert(baseUri, HDTVocabulary.VOID_DISTINCT_SUBJECTS, dictionary.getNsubjects());
 		header.insert(baseUri, HDTVocabulary.VOID_DISTINCT_OBJECTS, dictionary.getNobjects());
+		if(graphs != null) {
+			header.insert(baseUri, HDTVocabulary.VOID_GRAPHS, graphs.getNumberOfGraphs());
+		}
 
 		// Structure
 		String formatNode = "_:format";
@@ -117,6 +125,9 @@ public class HDTImpl implements HDTPrivate {
 
 		dictionary.populateHeader(header, dictNode);
 		triples.populateHeader(header, triplesNode);
+		if(graphs != null) {
+			graphs.populateHeader(header, triplesNode);
+		}
 
 		header.insert(statisticsNode, HDTVocabulary.HDT_SIZE, getDictionary().size()+getTriples().size());
 
@@ -176,6 +187,20 @@ public class HDTImpl implements HDTPrivate {
 		iListener.setRange(60, 100);
 		triples = TriplesFactory.createTriples(ci);
 		triples.load(input, ci, iListener);
+		
+		// Load Graphs
+		try {
+			// cutting of the angle brackets (<>) of HDTVocabulary.ANNOTATION_MODE and check if its in the header
+			IteratorTripleString it = header.search("", HDTVocabulary.ANNOTATION_MODE.substring(1, HDTVocabulary.ANNOTATION_MODE.length()-1), "");
+			
+			if(it.hasNext()) {
+				graphs.setNumberOfGraphs(dictionary.getNgraphs());
+				graphs.setNumberOfTriples(triples.getNumberOfElements(), NumberOfTriplesAccuracy.EXACT);
+				graphs.load(input, ci, iListener);
+			}
+		} catch (NotFoundException e) {
+			// the hdt file contains triples, not quads
+		}
 	}
 
 	@Override
@@ -260,6 +285,15 @@ public class HDTImpl implements HDTPrivate {
 		triples = TriplesFactory.createTriples(ci);
 		triples.mapFromFile(input, f, iListener);
 
+		// Load Graphs
+		try {
+			graphs.setNumberOfGraphs(dictionary.getNgraphs());
+			graphs.setNumberOfTriples(triples.getNumberOfElements(), NumberOfTriplesAccuracy.EXACT);
+			graphs.load(input, ci, iListener);
+		} catch(EOFException e) {
+			//no graphs to load
+		}
+		
 		input.close();
 	}
 
@@ -289,6 +323,15 @@ public class HDTImpl implements HDTPrivate {
 		ci.clear();
 		ci.setType(ControlInfo.Type.TRIPLES);
 		triples.save(output, ci, iListener);
+		
+		if(graphs != null) {
+			ci.clear();
+			ci.setFormat(HDTVocabulary.ANNOTATION_MODE);
+			ci.setType(graphs.getType());
+			ci.save(output);
+			
+			graphs.save(output, iListener);
+		}
 	}
 
 	/*
@@ -317,39 +360,28 @@ public class HDTImpl implements HDTPrivate {
 			);
 
 		if(triple.getSubject()==-1 || triple.getPredicate()==-1 || triple.getObject()==-1) {
-			//throw new NotFoundException("String not found in dictionary");
-			return new IteratorTripleString() {
-				@Override
-				public TripleString next() {
-					return null;
-				}
-				@Override
-				public boolean hasNext() {
-					return false;
-				}
-				@Override
-				public TripleString previous() {
-					return null;
-				}
-				@Override
-				public ResultEstimationType numResultEstimation() {
-					return ResultEstimationType.EXACT;
-				}
-				@Override
-				public boolean hasPrevious() {
-					return false;
-				}
-				@Override
-				public void goToStart() {
-				}
-				@Override
-				public long estimatedNumResults() {
-					return 0;
-				}
-			};
+			throw new NotFoundException("String not found in dictionary");
 		}
 
 		return new DictionaryTranslateIterator(triples.search(triple), dictionary, subject, predicate, object);
+	}
+	
+	@Override
+	public IteratorTripleString search(CharSequence subject, CharSequence predicate, CharSequence object, CharSequence graph) throws NotFoundException {
+		
+		// Conversion from QuadString to QuadID
+		QuadID quad = new QuadID(
+				dictionary.stringToId(subject, TripleComponentRole.SUBJECT),
+				dictionary.stringToId(predicate, TripleComponentRole.PREDICATE),
+				dictionary.stringToId(object, TripleComponentRole.OBJECT),
+				dictionary.stringToId(graph, TripleComponentRole.GRAPH)
+			);
+		
+		if(quad.getSubject()==-1 || quad.getPredicate()==-1 || quad.getObject()==-1 || quad.getGraph() == -1) {
+			throw new NotFoundException("String not found in dictionary");
+		}
+
+		return new DictionaryTranslateIterator(triples.search(quad, graphs), dictionary, subject, predicate, object, graph);
 	}
 
 	/*
@@ -381,13 +413,23 @@ public class HDTImpl implements HDTPrivate {
 	public Triples getTriples() {
 		return triples;
 	}
+	
+	/*
+	 * (non-Javadoc)
+	 *
+	 * @see hdt.HDT#getGraphs()
+	 */
+	@Override
+	public GraphInformation getGraphs() {
+		return graphs;
+	}
 
 	/* (non-Javadoc)
 	 * @see hdt.hdt.HDT#getSize()
 	 */
 	@Override
 	public long size() {
-		return dictionary.size()+triples.size();
+		return dictionary.size()+triples.size()+graphs.size();
 	}
 
 	public void loadFromModifiableHDT(TempHDT modHdt, ProgressListener listener) {
@@ -398,6 +440,7 @@ public class HDTImpl implements HDTPrivate {
         // Get parts
         TempTriples modifiableTriples = (TempTriples) modHdt.getTriples();
         TempDictionary modifiableDictionary = (TempDictionary) modHdt.getDictionary();
+        GraphInformationImpl graphInformation = modHdt.getGraphs();
 
         // Convert triples to final format
         if(triples.getClass().equals(modifiableTriples.getClass())) {
@@ -416,6 +459,8 @@ public class HDTImpl implements HDTPrivate {
                 dictionary.load(modifiableDictionary, listener);
                 //System.out.println("Dictionary conversion time: "+dictConvTime.stopAndShow());
         }
+        
+        this.graphs = graphInformation; 
 
         this.baseUri = modHdt.getBaseURI();
 	}

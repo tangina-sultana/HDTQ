@@ -27,10 +27,16 @@
 
 package org.rdfhdt.hdt.iterator;
 
+import java.util.Iterator;
+
+import org.rdfhdt.hdt.compact.bitmap.Bitmap375;
 import org.rdfhdt.hdt.dictionary.Dictionary;
 import org.rdfhdt.hdt.dictionary.DictionaryUtil;
 import org.rdfhdt.hdt.enums.ResultEstimationType;
 import org.rdfhdt.hdt.enums.TripleComponentRole;
+import org.rdfhdt.hdt.graphs.GraphInformationImpl;
+import org.rdfhdt.hdt.quads.QuadID;
+import org.rdfhdt.hdt.quads.QuadString;
 import org.rdfhdt.hdt.triples.IteratorTripleID;
 import org.rdfhdt.hdt.triples.IteratorTripleString;
 import org.rdfhdt.hdt.triples.TripleID;
@@ -47,10 +53,10 @@ public class DictionaryTranslateIterator implements IteratorTripleString {
 	/** The dictionary */
 	Dictionary dictionary;
 
-	CharSequence s, p, o;
+	CharSequence s, p, o, g;
 	
-	int lastSid, lastPid, lastOid;
-	CharSequence lastSstr, lastPstr, lastOstr;
+	int lastSid, lastPid, lastOid, lastGid;
+	CharSequence lastSstr, lastPstr, lastOstr, lastGstr;
 	
 	/**
 	 * Basic constructor
@@ -80,6 +86,23 @@ public class DictionaryTranslateIterator implements IteratorTripleString {
 		this.p = p==null ? "" : p;
 		this.o = o==null ? "" : o;
 	}
+	
+	/**
+	 * Basic constructor
+	 * 
+	 * @param iteratorTripleID
+	 *            Iterator of TripleID to be used
+	 * @param dictionary
+	 *            The dictionary to be used
+	 */
+	public DictionaryTranslateIterator(IteratorTripleID iteratorTripleID, Dictionary dictionary, CharSequence s, CharSequence p, CharSequence o, CharSequence g) {
+		this.iterator = iteratorTripleID;
+		this.dictionary = dictionary;
+		this.s = s==null ? "" : s;
+		this.p = p==null ? "" : p;
+		this.o = o==null ? "" : o;
+		this.g = g==null ? "" : g;
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -97,7 +120,7 @@ public class DictionaryTranslateIterator implements IteratorTripleString {
 	 * @see java.util.Iterator#next()
 	 */
 	@Override
-	public TripleString next() {
+	public TripleString next() {		
 		TripleID triple = iterator.next();
 		// convert the tripleID to TripleString
 		
@@ -120,6 +143,18 @@ public class DictionaryTranslateIterator implements IteratorTripleString {
 		} else if(triple.getObject()!=lastOid) {
 			lastOstr = dictionary.idToString(triple.getObject(), TripleComponentRole.OBJECT);
 			lastOid = triple.getObject();
+		}
+		
+		if(triple instanceof QuadID) {
+			int graphID = ((QuadID) triple).getGraph();
+			if(g.length()!=0) {
+				lastGstr = g;
+			} else if(graphID!=lastGid) {
+				lastGstr = dictionary.idToString(graphID, TripleComponentRole.GRAPH);
+				lastGid = graphID;
+			}
+			
+			return new QuadString(lastSstr, lastPstr, lastOstr, lastGstr);
 		}
 		
 		return new TripleString(lastSstr, lastPstr, lastOstr);
@@ -171,4 +206,13 @@ public class DictionaryTranslateIterator implements IteratorTripleString {
 		return iterator.numResultEstimation();
 	}
 
+	@Override
+	public long getNextTriplePosition() {
+		return iterator.getNextTriplePosition();
+	}
+
+	@Override
+	public long getPreviousTriplePosition() {
+		return iterator.getPreviousTriplePosition();
+	}
 }

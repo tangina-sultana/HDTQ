@@ -46,14 +46,19 @@ import org.rdfhdt.hdt.compact.sequence.SequenceFactory;
 import org.rdfhdt.hdt.compact.sequence.SequenceLog64;
 import org.rdfhdt.hdt.enums.TripleComponentOrder;
 import org.rdfhdt.hdt.exceptions.IllegalFormatException;
+import org.rdfhdt.hdt.exceptions.NotImplementedException;
+import org.rdfhdt.hdt.graphs.GraphInformation;
+import org.rdfhdt.hdt.graphs.GraphInformationImpl;
 import org.rdfhdt.hdt.hdt.HDTVocabulary;
 import org.rdfhdt.hdt.header.Header;
+import org.rdfhdt.hdt.iterator.SequentialSearchIteratorQuadID;
 import org.rdfhdt.hdt.iterator.SequentialSearchIteratorTripleID;
 import org.rdfhdt.hdt.listener.ProgressListener;
 import org.rdfhdt.hdt.options.ControlInfo;
 import org.rdfhdt.hdt.options.ControlInformation;
 import org.rdfhdt.hdt.options.HDTOptions;
 import org.rdfhdt.hdt.options.HDTSpecification;
+import org.rdfhdt.hdt.quads.QuadID;
 import org.rdfhdt.hdt.triples.IteratorTripleID;
 import org.rdfhdt.hdt.triples.TempTriples;
 import org.rdfhdt.hdt.triples.TripleID;
@@ -69,26 +74,20 @@ import org.rdfhdt.hdt.util.listener.ListenerUtil;
  *
  */
 public class BitmapTriples implements TriplesPrivate {
-	protected TripleComponentOrder order=TripleComponentOrder.SPO;
+	public TripleComponentOrder order=TripleComponentOrder.SPO;
 	
-	public Sequence seqY;
-
-	public Sequence seqZ;
-
+	public Sequence seqY, seqZ;
 	protected Sequence indexZ;
-
 	protected Sequence predicateCount;
-	public Bitmap bitmapY;
-
-	public Bitmap bitmapZ;
+	public Bitmap bitmapY, bitmapZ;
 
 	protected Bitmap bitmapIndexZ;
 	
-	protected AdjacencyList adjY, adjZ, adjIndex;
+	public AdjacencyList adjY, adjZ, adjIndex;
 	
 	// Index for Y
-	PredicateIndex predicateIndex;
-
+	public PredicateIndex predicateIndex;
+	
 	public BitmapTriples() {
 		this(new HDTSpecification());
 	}
@@ -265,6 +264,46 @@ public class BitmapTriples implements TriplesPrivate {
 		}
 
 	}
+	
+	/* (non-Javadoc)
+	 * @see hdt.triples.Triples#search(hdt.triples.TripleID)
+	 */
+	public IteratorTripleID search(QuadID pattern, GraphInformation graphs) {
+		QuadID reorderedPat = new QuadID(pattern);
+		TripleOrderConvert.swapComponentOrder(reorderedPat, TripleComponentOrder.SPO, order);
+		String patternString = reorderedPat.getPatternString();
+		GraphInformationImpl graphsImpl = (GraphInformationImpl) graphs;
+		
+		if(patternString.equals("?P??")) {
+			return graphsImpl.getAnnotator().getBitmapGraphIteratorYFOQ(this, pattern);
+		}
+		
+		if(patternString.equals("?P?G")) {
+			return graphsImpl.getAnnotator().getBitmapGraphIteratorYGFOQ(this, pattern);
+		}
+		
+		if(patternString.equals("?PO?") || patternString.equals("??O?")) {
+			return graphsImpl.getAnnotator().getBitmapGraphIteratorZFOQ(this, pattern);	
+		}
+		
+		if(patternString.equals("?POG") || patternString.equals("??OG")) {
+			return graphsImpl.getAnnotator().getBitmapGraphIteratorZGFOQ(this, pattern);	
+		}
+		
+		IteratorTripleID bitIt;
+		if(patternString.endsWith("G")) {
+			bitIt = graphsImpl.getAnnotator().getBitmapGraphIteratorG(this, pattern);
+		} else {
+			bitIt = graphsImpl.getAnnotator().getBitmapGraphIterator(this, pattern);
+		}
+		if(patternString.equals("????") || patternString.equals("???G") || patternString.equals("S???") || patternString.equals("S??G") || patternString.equals("SP??") || patternString.equals("SP?G") || patternString.equals("SPO?") || patternString.equals("SPOG")) {
+			return bitIt;
+		}
+		
+		// S?O? / S?OG
+		return new SequentialSearchIteratorQuadID(pattern, bitIt);
+
+	}
 
 	/* (non-Javadoc)
 	 * @see hdt.triples.Triples#searchAll()
@@ -339,7 +378,7 @@ public class BitmapTriples implements TriplesPrivate {
 		seqZ.load(input, iListener);
 		
 		adjY = new AdjacencyList(seqY, bitmapY);
-		adjZ = new AdjacencyList(seqZ, bitmapZ);
+		adjZ = new AdjacencyList(seqZ, bitmapZ);		
 	}
 	
 

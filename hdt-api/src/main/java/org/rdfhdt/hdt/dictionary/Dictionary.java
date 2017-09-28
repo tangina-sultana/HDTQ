@@ -93,6 +93,11 @@ public interface Dictionary extends Closeable {
 	 * Returns the number of subjects/objects in the dictionary.
 	 */
 	long getNshared();
+	
+	/**
+	 * Returns the number of graphs in the dictionary.
+	 */
+	long getNgraphs();
 		
 	DictionarySection getSubjects();
 	
@@ -101,6 +106,8 @@ public interface Dictionary extends Closeable {
 	DictionarySection getObjects();
 	
 	DictionarySection getShared();
+	
+	DictionarySection getGraphs();
 	
 	/**
 	 * Fills the header with information from the dictionary

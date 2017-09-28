@@ -51,6 +51,7 @@ public abstract class BaseDictionary implements DictionaryPrivate {
 	protected DictionarySectionPrivate predicates;
 	protected DictionarySectionPrivate objects;
 	protected DictionarySectionPrivate shared;
+	protected DictionarySectionPrivate graphs;
 	
 	public BaseDictionary(HDTOptions spec) {
 		this.spec = spec;
@@ -80,6 +81,8 @@ public abstract class BaseDictionary implements DictionaryPrivate {
 				return id-shared.getNumberOfElements();
 			}
 		case PREDICATE:
+			return id;
+		case GRAPH:
 			return id;
 		default:
 			throw new IllegalArgumentException();
@@ -131,6 +134,8 @@ public abstract class BaseDictionary implements DictionaryPrivate {
 				return getGlobalId(ret, DictionarySectionRole.OBJECT);
 			}
 			return -1;
+		case GRAPH:
+			return graphs.locate(str);
 		default:
 			throw new IllegalArgumentException();
 		}
@@ -138,12 +143,12 @@ public abstract class BaseDictionary implements DictionaryPrivate {
 	
 	@Override
 	public long getNumberOfElements() {
-		return subjects.getNumberOfElements()+predicates.getNumberOfElements()+objects.getNumberOfElements()+shared.getNumberOfElements();
+		return subjects.getNumberOfElements()+predicates.getNumberOfElements()+objects.getNumberOfElements()+shared.getNumberOfElements()+graphs.getNumberOfElements();
 	}
 
 	@Override
 	public long size() {
-		return subjects.size()+predicates.size()+objects.size()+shared.size();
+		return subjects.size()+predicates.size()+objects.size()+shared.size()+graphs.size();
 	}
 
 	@Override
@@ -164,6 +169,11 @@ public abstract class BaseDictionary implements DictionaryPrivate {
 	@Override
 	public long getNshared() {
 		return shared.getNumberOfElements();
+	}
+	
+	@Override
+	public long getNgraphs() {
+		return graphs.getNumberOfElements();
 	}
 
 	@Override
@@ -186,6 +196,11 @@ public abstract class BaseDictionary implements DictionaryPrivate {
 		return shared;
 	}
 	
+	@Override
+	public DictionarySection getGraphs() {
+		return graphs;
+	}
+	
 	private DictionarySectionPrivate getSection(int id, TripleComponentRole role) {
 		switch (role) {
 		case SUBJECT:
@@ -202,6 +217,8 @@ public abstract class BaseDictionary implements DictionaryPrivate {
 			} else {
 				return (DictionarySectionPrivate)objects;
 			}
+		case GRAPH:
+			return (DictionarySectionPrivate)graphs;
 		default:
 			throw new IllegalArgumentException();
 		}

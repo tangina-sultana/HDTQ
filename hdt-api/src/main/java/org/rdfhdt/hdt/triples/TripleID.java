@@ -28,12 +28,11 @@
 package org.rdfhdt.hdt.triples;
 
 
-
 /**
  * TripleID holds a triple as integers
  * 
  */
-public final class TripleID implements Comparable<TripleID> {
+public class TripleID implements Comparable<TripleID> {
 
 	private int subject;
 	private int predicate;

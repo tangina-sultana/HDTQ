@@ -41,6 +41,7 @@ public class BitmapFactory {
 	private BitmapFactory() {}
 	
 	public static final byte TYPE_BITMAP_PLAIN = 1;
+	public static final byte TYPE_BITMAP_ROAR = 2;
 	
 	public static Bitmap createBitmap(String type) {
 		return new Bitmap375();
@@ -52,6 +53,9 @@ public class BitmapFactory {
 		input.reset();
 		if(value==TYPE_BITMAP_PLAIN) {
 			return new Bitmap375();
+		}
+		else if (value==TYPE_BITMAP_ROAR){
+			return new BitmapRoaring64();
 		}
 		throw new IllegalFormatException("Implementation not found for Bitmap with code "+value);
 	}

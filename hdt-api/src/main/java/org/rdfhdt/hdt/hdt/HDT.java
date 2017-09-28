@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.rdfhdt.hdt.dictionary.Dictionary;
+import org.rdfhdt.hdt.graphs.GraphInformation;
 import org.rdfhdt.hdt.header.Header;
 import org.rdfhdt.hdt.listener.ProgressListener;
 import org.rdfhdt.hdt.rdf.RDFAccess;
@@ -66,6 +67,12 @@ public interface HDT extends RDFAccess,Closeable {
 	 * @return Triples
 	 */
 	Triples getTriples();
+	
+	/**
+	 * Gets the graphs of the HDT
+	 * @return Graphs
+	 */
+	GraphInformation getGraphs();
 		
 	/**
 	 * Saves to OutputStream in HDT format

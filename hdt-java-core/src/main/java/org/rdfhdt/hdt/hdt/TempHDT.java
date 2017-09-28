@@ -30,6 +30,7 @@ package org.rdfhdt.hdt.hdt;
 import java.io.Closeable;
 
 import org.rdfhdt.hdt.dictionary.TempDictionary;
+import org.rdfhdt.hdt.graphs.GraphInformationImpl;
 import org.rdfhdt.hdt.header.Header;
 import org.rdfhdt.hdt.listener.ProgressListener;
 import org.rdfhdt.hdt.triples.TempTriples;
@@ -75,6 +76,8 @@ public interface TempHDT extends Closeable {
 	TempTriples getTriples();
 	
 	Header getHeader();
+	
+	GraphInformationImpl getGraphs();
 
 	String getBaseURI();
 }

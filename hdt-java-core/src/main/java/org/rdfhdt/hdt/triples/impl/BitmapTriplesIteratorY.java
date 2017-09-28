@@ -210,4 +210,16 @@ public class BitmapTriplesIteratorY implements IteratorTripleID {
 		throw new UnsupportedOperationException();
 	}
 
+	@Override
+	public long getNextTriplePosition() {
+		if(posZ>nextZ) {
+			return adjZ.find(nextY);
+		}
+		else
+			return posZ;
+	}
+	@Override
+	public long getPreviousTriplePosition() {
+		return posZ-1;
+	}
 }

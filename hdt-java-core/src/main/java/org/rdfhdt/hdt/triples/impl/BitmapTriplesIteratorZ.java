@@ -44,7 +44,7 @@ public class BitmapTriplesIteratorZ implements IteratorTripleID {
 	private int patZ;
 	
 	private AdjacencyList adjY, adjZ;
-	long posZ;
+	long posZ,prevZ=-1;
 	private int x, y, z;
 	
 	BitmapTriplesIteratorZ(BitmapTriples triples, TripleID pattern) {
@@ -170,5 +170,14 @@ public class BitmapTriplesIteratorZ implements IteratorTripleID {
 	@Override
 	public void remove() {
 		throw new UnsupportedOperationException();
+	}
+	
+	@Override
+	public long getNextTriplePosition() {
+		return posZ;
+	}
+	@Override
+	public long getPreviousTriplePosition() {
+		return prevZ;
 	}
 }

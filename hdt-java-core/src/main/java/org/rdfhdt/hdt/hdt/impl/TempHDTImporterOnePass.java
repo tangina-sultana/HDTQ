@@ -34,11 +34,14 @@ import org.rdfhdt.hdt.dictionary.TempDictionary;
 import org.rdfhdt.hdt.enums.RDFNotation;
 import org.rdfhdt.hdt.enums.TripleComponentRole;
 import org.rdfhdt.hdt.exceptions.ParserException;
+import org.rdfhdt.hdt.graphs.GraphInformationImpl;
+import org.rdfhdt.hdt.graphs.GraphInformationImpl.NumberOfTriplesAccuracy;
 import org.rdfhdt.hdt.hdt.HDTVocabulary;
 import org.rdfhdt.hdt.hdt.TempHDT;
 import org.rdfhdt.hdt.hdt.TempHDTImporter;
 import org.rdfhdt.hdt.listener.ProgressListener;
 import org.rdfhdt.hdt.options.HDTOptions;
+import org.rdfhdt.hdt.quads.QuadString;
 import org.rdfhdt.hdt.rdf.RDFParserCallback;
 import org.rdfhdt.hdt.rdf.RDFParserCallback.RDFCallback;
 import org.rdfhdt.hdt.rdf.RDFParserFactory;
@@ -65,14 +68,33 @@ public class TempHDTImporterOnePass implements TempHDTImporter {
 		}
 
 		public void processTriple(TripleString triple, long pos) {
+			insertTriple(triple, pos);
+			num++;
+			ListenerUtil.notifyCond(listener, "Loaded "+num+" triples", num, 0, 100);
+		}
+		
+		public void processQuad(QuadString quad, long pos) {
+			insertQuad(quad, pos);
+			num++;
+			ListenerUtil.notifyCond(listener, "Loaded "+num+" triples", num, 0, 100);
+		}
+		
+		private void insertTriple(TripleString triple, long pos) {
 			triples.insert(
 					dict.insert(triple.getSubject(), TripleComponentRole.SUBJECT),
 					dict.insert(triple.getPredicate(), TripleComponentRole.PREDICATE),
 					dict.insert(triple.getObject(), TripleComponentRole.OBJECT)
 			);
-			num++;
 			size+=triple.getSubject().length()+triple.getPredicate().length()+triple.getObject().length()+4;  // Spaces and final dot
-			ListenerUtil.notifyCond(listener, "Loaded "+num+" triples", num, 0, 100);
+		}
+		private void insertQuad(QuadString quad, long pos) {
+			triples.insert(
+					dict.insert(quad.getSubject(), TripleComponentRole.SUBJECT),
+					dict.insert(quad.getPredicate(), TripleComponentRole.PREDICATE),
+					dict.insert(quad.getObject(), TripleComponentRole.OBJECT),
+					dict.insert(quad.getGraph(), TripleComponentRole.GRAPH)
+			);
+			size+=quad.getSubject().length()+quad.getPredicate().length()+quad.getObject().length()+quad.getGraph().length()+4;  // Spaces and final dot
 		}
 	};
 	
@@ -89,20 +111,37 @@ public class TempHDTImporterOnePass implements TempHDTImporter {
 		}
 		RDFInfo.setSizeInBytes(new File(filename).length(), specs); //else just get sizeOfRDF
 		
+		// Fill the specs with missing Triple / Quad property
+		if (specs.getInt("triples.components.count") == 0) {
+			specs.setInt("triples.components.count", notation.COMPONENT_COUNT);
+		}
+		
 		// Create Modifiable Instance
 		TempHDT modHDT = new TempHDTImpl(specs, baseUri, ModeOfLoading.ONE_PASS);
 		TempDictionary dictionary = modHDT.getDictionary();
 		TempTriples triples = modHDT.getTriples();
+		GraphInformationImpl graphs = modHDT.getGraphs();
 		TripleAppender appender = new TripleAppender(dictionary, triples, listener);
 
         // Load RDF in the dictionary and generate triples
         dictionary.startProcessing();
         parser.doParse(filename, baseUri, notation, appender);
         dictionary.endProcessing();
+        
+        // update graphinformation with the total number of graphs and triples
+        if(graphs != null) {
+	        graphs.setNumberOfGraphs(dictionary.getGraphs().getNumberOfElements());
+	        graphs.setNumberOfTriples(triples.getNumberOfElements(), NumberOfTriplesAccuracy.UP_TO); // this can include duplicates, so UP_TO
+        }
 		
 		// Reorganize both the dictionary and the triples
 		modHDT.reorganizeDictionary(listener);
 		modHDT.reorganizeTriples(listener);
+		
+		if(graphs != null) {
+			graphs.setNumberOfTriples(triples.getNumberOfElements(), NumberOfTriplesAccuracy.EXACT); // Now we know the exact number of triples
+			graphs.trimBitmaps();
+		}
 		
 		modHDT.getHeader().insert( "_:statistics", HDTVocabulary.ORIGINAL_SIZE, appender.size);
 		

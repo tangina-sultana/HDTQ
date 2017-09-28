@@ -40,36 +40,52 @@ public enum RDFNotation {
 	 * 
 	 * @see <a href="http://en.wikipedia.org/wiki/RDF/XML">Wikipedia</a>
 	 */
-	RDFXML,
+	RDFXML(3),
 	/**
 	 * N-TRIPLES notation
 	 * 
 	 * @see <a href="http://en.wikipedia.org/wiki/N-Triples">Wikipedia</a>
 	 */
-	NTRIPLES,
+	NTRIPLES(3),
 	/**
 	 * TURTLE notation
 	 * 
 	 * @see <a href="http://en.wikipedia.org/wiki/Turtle_(syntax)">Wikipedia</a>
 	 */
-	TURTLE,
+	TURTLE(3),
 	/**
 	 * Notation 3 notation
 	 * 
 	 * @see <a href="http://en.wikipedia.org/wiki/Notation_3">Wikipedia</a>
 	 */
-	N3,
+	N3(3),
+	
+	/**
+	 * NQuads notation
+	 */
+	NQUADS(4),
+	
+	/**
+	 * TriG notation
+	 */
+	TRIG(4),
 	
 	/**
 	 * Tar Package with multiple files in other RDF Formats
 	 */
-	TAR,
+	TAR(3),
 	
 	/**
 	 * RAR Package with multiple files in other RDF Formats
 	 */
-	RAR
+	RAR(3)
 	;
+	
+	public final int COMPONENT_COUNT;
+	
+	private RDFNotation(int components) {
+		COMPONENT_COUNT = components;
+	}
 	
 	public static RDFNotation parse(String str) {
 		if(str==null || str.isEmpty()) {
@@ -84,6 +100,10 @@ public enum RDFNotation {
 			return RDFXML;
 		} else if(str.equals("turtle")) {
 			return TURTLE;
+		} else if(str.equals("nquads")) {
+			return NQUADS;
+		} else if(str.equals("trig")) {
+			return TRIG;
 		} else if(str.equals("rar")) {
 			return RAR;
 		} else if(str.equals("tar")||str.equals("tgz")||str.equals("tbz")||str.equals("tbz2")) {
@@ -107,6 +127,10 @@ public enum RDFNotation {
 			return NTRIPLES;
 		} else if(str.endsWith("n3")) {
 			return N3;
+		} else if(str.endsWith("nq")) {
+			return NQUADS;
+		} else if(str.endsWith("trig")) {
+			return TRIG;
 		} else if(str.endsWith("rdf")||str.endsWith("xml")||str.endsWith("owl")) {
 			return RDFXML;
 		} else if(str.endsWith("ttl")) {

@@ -55,12 +55,13 @@ import org.rdfhdt.hdt.util.listener.IntermediateListener;
 public class FourSectionDictionary extends BaseDictionary {
 
 	public FourSectionDictionary(HDTOptions spec, 
-			DictionarySectionPrivate s, DictionarySectionPrivate p, DictionarySectionPrivate o, DictionarySectionPrivate sh) {
+			DictionarySectionPrivate s, DictionarySectionPrivate p, DictionarySectionPrivate o, DictionarySectionPrivate sh, DictionarySectionPrivate g) {
 		super(spec);
 		this.subjects = s;
 		this.predicates = p;
 		this.objects = o;
 		this.shared = sh;
+		this.graphs = g;
 	}
 	
 	public FourSectionDictionary(HDTOptions spec) {
@@ -70,6 +71,7 @@ public class FourSectionDictionary extends BaseDictionary {
 		predicates = new PFCDictionarySection(spec);
 		objects = new PFCDictionarySection(spec);
 		shared = new PFCDictionarySection(spec);
+		graphs = new PFCDictionarySection(spec);
 	}
 
 	/* (non-Javadoc)
@@ -82,6 +84,7 @@ public class FourSectionDictionary extends BaseDictionary {
 		predicates.load(other.getPredicates(), iListener);
 		objects.load(other.getObjects(), iListener);
 		shared.load(other.getShared(), iListener);
+		graphs.load(other.getGraphs(), iListener);
 	}
 
 	/* (non-Javadoc)
@@ -99,7 +102,7 @@ public class FourSectionDictionary extends BaseDictionary {
 		subjects.save(output, iListener);
 		predicates.save(output, iListener);
 		objects.save(output, iListener);
-
+		graphs.save(output, iListener);
 	}
 
 	/* (non-Javadoc)
@@ -117,6 +120,7 @@ public class FourSectionDictionary extends BaseDictionary {
 		subjects = DictionarySectionFactory.loadFrom(input, iListener);
 		predicates = DictionarySectionFactory.loadFrom(input, iListener);
 		objects = DictionarySectionFactory.loadFrom(input, iListener);
+		graphs = DictionarySectionFactory.loadFrom(input, iListener);
 	}
 	
 	@Override
@@ -132,6 +136,7 @@ public class FourSectionDictionary extends BaseDictionary {
 		subjects = DictionarySectionFactory.loadFrom(in, f, iListener);
 		predicates = DictionarySectionFactory.loadFrom(in, f, iListener);
 		objects = DictionarySectionFactory.loadFrom(in, f, iListener);
+		graphs = DictionarySectionFactory.loadFrom(in, f, iListener);
 		
 		// Use cache only for predicates. Preload only up to 100K predicates.
 		// FIXME: DISABLED

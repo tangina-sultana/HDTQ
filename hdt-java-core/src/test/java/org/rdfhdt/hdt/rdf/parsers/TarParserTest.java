@@ -3,6 +3,7 @@ package org.rdfhdt.hdt.rdf.parsers;
 import org.junit.Test;
 import org.rdfhdt.hdt.enums.RDFNotation;
 import org.rdfhdt.hdt.exceptions.ParserException;
+import org.rdfhdt.hdt.quads.QuadString;
 import org.rdfhdt.hdt.rdf.RDFParserCallback.RDFCallback;
 import org.rdfhdt.hdt.triples.TripleString;
 
@@ -17,6 +18,11 @@ public class TarParserTest implements RDFCallback {
 	@Override
 	public void processTriple(TripleString triple, long pos) {
 
+	}
+
+	@Override
+	public void processQuad(QuadString quad, long pos) {
+		
 	}
 
 }

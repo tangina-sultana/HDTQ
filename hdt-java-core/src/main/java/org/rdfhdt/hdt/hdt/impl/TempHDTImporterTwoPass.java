@@ -33,11 +33,13 @@ import java.io.IOException;
 import org.rdfhdt.hdt.dictionary.TempDictionary;
 import org.rdfhdt.hdt.enums.RDFNotation;
 import org.rdfhdt.hdt.enums.TripleComponentRole;
+import org.rdfhdt.hdt.exceptions.NotImplementedException;
 import org.rdfhdt.hdt.exceptions.ParserException;
 import org.rdfhdt.hdt.hdt.TempHDT;
 import org.rdfhdt.hdt.hdt.TempHDTImporter;
 import org.rdfhdt.hdt.listener.ProgressListener;
 import org.rdfhdt.hdt.options.HDTOptions;
+import org.rdfhdt.hdt.quads.QuadString;
 import org.rdfhdt.hdt.rdf.RDFParserCallback;
 import org.rdfhdt.hdt.rdf.RDFParserCallback.RDFCallback;
 import org.rdfhdt.hdt.rdf.RDFParserFactory;
@@ -65,6 +67,16 @@ public class TempHDTImporterTwoPass implements TempHDTImporter {
 			dict.insert(triple.getSubject(), TripleComponentRole.SUBJECT);
 			dict.insert(triple.getPredicate(), TripleComponentRole.PREDICATE);
 			dict.insert(triple.getObject(), TripleComponentRole.OBJECT);
+			count++;
+			ListenerUtil.notifyCond(listener, "Generating dictionary "+count+" triples processed.", count, 0, 100);
+		}
+		
+		@Override
+		public void processQuad(QuadString quad, long pos) {
+			dict.insert(quad.getSubject(), TripleComponentRole.SUBJECT);
+			dict.insert(quad.getPredicate(), TripleComponentRole.PREDICATE);
+			dict.insert(quad.getObject(), TripleComponentRole.OBJECT);
+			dict.insert(quad.getGraph(), TripleComponentRole.GRAPH);
 			count++;
 			ListenerUtil.notifyCond(listener, "Generating dictionary "+count+" triples processed.", count, 0, 100);
 		}
@@ -100,6 +112,17 @@ public class TempHDTImporterTwoPass implements TempHDTImporter {
 					);
 			count++;
 			ListenerUtil.notifyCond(listener, "Generating triples "+count+" triples processed.", count, 0, 100);
+		}
+		
+		public void processQuad(QuadString quad, long pos) {
+			triples.insert(
+					dict.stringToId(quad.getSubject(), TripleComponentRole.SUBJECT),
+					dict.stringToId(quad.getPredicate(), TripleComponentRole.PREDICATE),
+					dict.stringToId(quad.getObject(), TripleComponentRole.OBJECT),
+					dict.stringToId(quad.getGraph(), TripleComponentRole.GRAPH)
+					);
+			count++;
+			ListenerUtil.notifyCond(listener, "Generating quads "+count+" quads processed.", count, 0, 100);
 		}
 	};
 
@@ -140,5 +163,10 @@ public class TempHDTImporterTwoPass implements TempHDTImporter {
 		modHDT.reorganizeTriples(listener);
 
 		return modHDT;
+	}
+	
+	public TempHDT loadFromRDFGraphs(HDTOptions specs, String filename, String baseUri, RDFNotation notation, ProgressListener listener)
+			throws IOException, ParserException {
+		throw new NotImplementedException();
 	}
 }

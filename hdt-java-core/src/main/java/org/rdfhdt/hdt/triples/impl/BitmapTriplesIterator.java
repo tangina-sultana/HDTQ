@@ -31,7 +31,6 @@ import org.rdfhdt.hdt.compact.bitmap.AdjacencyList;
 import org.rdfhdt.hdt.enums.ResultEstimationType;
 import org.rdfhdt.hdt.enums.TripleComponentOrder;
 import org.rdfhdt.hdt.exceptions.NotFoundException;
-import org.rdfhdt.hdt.exceptions.NotImplementedException;
 import org.rdfhdt.hdt.triples.IteratorTripleID;
 import org.rdfhdt.hdt.triples.TripleID;
 
@@ -41,16 +40,22 @@ import org.rdfhdt.hdt.triples.TripleID;
  */
 public class BitmapTriplesIterator implements IteratorTripleID {
 
-	private BitmapTriples triples;
-	private TripleID pattern, returnTriple;
-	private int patX, patY, patZ;
+	// NOTE: For simplicity, in our comments we assume a SPO order, that is, S=X, P=Y and O=Z.
 	
-	private AdjacencyList adjY, adjZ;
-	long posY, posZ, minY, minZ, maxY, maxZ;
-	private long nextY, nextZ;
-	private int x, y, z;
+	protected BitmapTriples triples; // access to the TripleIDs
+	protected TripleID pattern;
+	protected TripleID returnTriple;
+	protected int patX, patY, patZ; // patterns of the search
 	
-	BitmapTriplesIterator(BitmapTriples triples, TripleID pattern) {
+	protected AdjacencyList adjY, adjZ; // adjacency list of Predicates (Y) and Objects (Z). That is, adjY contains all predicates for each subject. AdjZ contains all objects for each pair (subject, predicate)
+	protected long posY, posZ; // current position of the predicate (posY), object (posZ). 
+	protected long minY, minZ, maxY, maxZ; // boundaries of the solution: predicates are in AdjY between minY and maxY. Objects are in AdjZ between minZ and maxZ  
+	protected long nextY, nextZ; // position of the next predicate (nextY) and the next object (nextZ)  
+	protected int x, y, z; // current solution, S=X, P=Y and O=Z
+	
+	protected BitmapTriplesIterator() { }
+	
+	protected BitmapTriplesIterator(BitmapTriples triples, TripleID pattern) {
 		this.triples = triples;
 		this.returnTriple = new TripleID();
 		this.pattern = new TripleID();
@@ -70,85 +75,86 @@ public class BitmapTriplesIterator implements IteratorTripleID {
 		
 //		((BitSequence375)triples.bitmapZ).dump();
 				
-		findRange();
-		goToStart();
+		findRange(); // get the boundaries where the solution for the pattern (patX, patY, patZ) can be found
+		goToStart(); // load the first solution and position the next pointers
 	}
 	
-	private void updateOutput() {
+	/*
+	 * Set the components (subject,predicate,object) of the returned triple 
+	 */
+	protected void updateOutput() {
 		returnTriple.setAll(x, y, z);
 		TripleOrderConvert.swapComponentOrder(returnTriple, triples.order, TripleComponentOrder.SPO);
 	}
 	
-	private void findRange() {
-		if(patX!=0) {
-			// S X X
-			if(patY!=0) {
-				// S P X
+	/*
+	 * get the boundaries where the solution for the pattern (patX, patY, patZ) can be found
+	 */
+	protected void findRange() {
+		if(patX!=0) { // the subject is provided in the query
+			//
+			if(patY!=0) { // the predicate is provided in the query
 				try {
-					minY = adjY.find(patX-1, patY);
-					maxY = minY+1;
-					if(patZ!=0) {
-						// S P O
-						minZ = adjZ.find(minY,patZ);
-						maxZ = minZ+1;
-					} else {
-						// S P ?
-						minZ = adjZ.find(minY);
-						maxZ = adjZ.last(minY)+1;
+					minY = adjY.find(patX-1, patY); // get the position (in the list of predicates, adjY) where it is listed the given predicate (patY) for the given subject (patX) 
+					maxY = minY+1; // given that the predicate is provided, the max range of the predicate is just the next position
+					if(patZ!=0) { // the object is provided in the query, i.e., (S,P,O).
+						minZ = adjZ.find(minY,patZ); // get the position (in the list of objects, adjZ) where it is listed the given object (patZ) for the current subject, predicate (minY)
+						maxZ = minZ+1; // given that the object is provided, the max range of the object is just the next position
+					} else { // the query is (S,P,?)
+						minZ = adjZ.find(minY); // get the initial position (in the list of objects, adjZ) where one can find the objects associated with the current subject, predicate (minY) 
+						maxZ = adjZ.last(minY)+1; // get the last position (in the list of objects, adjZ) where one can find the objects associated with the current subject, predicate (minY)
 					}
 				} catch (NotFoundException e) {
-					// Item not found in list, no results.
+					// Item is not found in the list, thus the solution has NO results.
 					minY = minZ = maxY = maxZ = 0;
 				}
-			} else {
-				// S ? X
-				minY = adjY.find(patX-1);
-				minZ = adjZ.find(minY);
-				maxY = adjY.last(patX-1)+1;
-				maxZ = adjZ.find(maxY);
+			} else { // the predicate is not provided in the query. The query is (S,?,?) or (S,?,O).
+				minY = adjY.find(patX-1); // get the initial position (in the list of predicates, adjY) where one can find the predicates for the given subject (patX)
+				minZ = adjZ.find(minY);  // get the initial position (in the list of objects, adjZ) where one can find the objects associated with the current subject, predicate (minY)
+				maxY = adjY.last(patX-1)+1; // get the last position (in the list of predicates, adjY) where one can find the predicates for the given subject (patX)
+				maxZ = adjZ.find(maxY); // get the last position (in the list of objects, adjZ) where one can find the objects associated with the current subject, predicate (minY)
 			}
-			x = patX;
-		} else {
-			// ? X X
-			minY=0;
-			minZ=0;
-			maxY = adjY.getNumberOfElements();
-			maxZ = adjZ.getNumberOfElements();
+			x = patX; // given that the subject is provided in the query, the solution for the subject (X) is set to the subject in the query.
+		} else { // the subject is NOT provided in the pattern, i.e., the query is (?,?,?) and retrieves all elements
+			minY=0; // the initial position of the predicate is 0 
+			minZ=0; // the initial position of the object is 0
+			maxY = adjY.getNumberOfElements(); // the max position of the predicate is the total number of elements
+			maxZ = adjZ.getNumberOfElements(); // the max position of the object is the total number of elements
 		}
 	}
 	
-	/* (non-Javadoc)
-	 * @see hdt.iterator.IteratorTripleID#hasNext()
+	/* 
+	 * Check if there are more solution
 	 */
 	@Override
 	public boolean hasNext() {
-		return posZ<maxZ;
+		return posZ<maxZ; // Just check if we have arrived to the maximum position of the objects that resolve the query
 	}
 
-	/* (non-Javadoc)
-	 * @see hdt.iterator.IteratorTripleID#next()
+	/* 
+	 * Get the next solution
 	 */
 	@Override
 	public TripleID next() {
-		z = (int) adjZ.get(posZ);
-		if(posZ==nextZ) {
-			posY++;
-			y = (int) adjY.get(posY);
+		z = (int) adjZ.get(posZ); // get the next object (Z). We just retrieve it from the list of objects (AdjZ) from current position posZ 
+		if(posZ==nextZ) { // if, with the current position of the object (posZ), we have reached the next list of objects (starting in nexZ), then we should update the associated predicate (Y) and, potentially, also the associated subject (X)
+			posY++; // move to the next position of predicates
+			y = (int) adjY.get(posY); // get the next predicate (Y). We just retrieve it from the list of predicates(AdjY) from current position posY
 //			nextZ = adjZ.find(posY+1);
-			nextZ = adjZ.findNext(nextZ)+1;
+			nextZ = adjZ.findNext(nextZ)+1; // update nextZ, storing in which position (in adjZ) ends the list of objects associated with the current subject,predicate  
 			
-			if(posY==nextY) {
-				x++;
+			if(posY==nextY) { // if we have reached the next list of objects (starting in nexZ) we should update the associated predicate (Y) and, potentially, also the associated subject (X)
+				x++; // get the next subject (X). Given that subject IDs are correlative, we just increase the ID ++.
 //				nextY = adjY.find(x);
-				nextY = adjY.findNext(nextY)+1;
+				nextY = adjY.findNext(nextY)+1; // update nextY, storing in which position (in AdjY) ends the list of predicates associated with the current subject
 			}
 		}
 		
-		posZ++;
+		posZ++; // increase the position where the next object can be found.
+		 
+		updateOutput(); // set the components (subject,predicate,object) of the returned triple
 		
-		updateOutput();
-		
-		return returnTriple;
+		return returnTriple; // return the triple as solution
 	}
 
 	/* (non-Javadoc)
@@ -168,8 +174,8 @@ public class BitmapTriplesIterator implements IteratorTripleID {
 
 		 posY = adjZ.findListIndex(posZ);
 
-		 z = (int) adjZ.get(posZ);
-		 y = (int) adjY.get(posY);
+		 z = (int) adjZ.get(posZ);  
+		 y = (int) adjY.get(posY);  
 		 x = (int) adjY.findListIndex(posY)+1;
 
 		 nextY = adjY.last(x-1)+1;
@@ -180,28 +186,27 @@ public class BitmapTriplesIterator implements IteratorTripleID {
 		 return returnTriple;
 	}
 
-	/* (non-Javadoc)
-	 * @see hdt.iterator.IteratorTripleID#goToStart()
+	/* 
+	 * load the first solution and position the next pointers
 	 */
+	
 	@Override
 	public void goToStart() {
-		posZ = minZ;
-        posY = adjZ.findListIndex(posZ);
+		posZ = minZ; // current position of the object is the initial one, minZ
+        posY = adjZ.findListIndex(posZ); // get the ordinal number of the list associated to the object position posZ (that is, posZ corresponds to the 1st list, or 2nd, list, ... etc).   
 
-        z = (int) adjZ.get(posZ);
-        y = (int) adjY.get(posY);
-        x = (int) adjY.findListIndex(posY)+1;
+        z = (int) adjZ.get(posZ); // get the next object (Z). We just retrieve it from the list of objects (AdjZ) from current position posZ
+        y = (int) adjY.get(posY); // get the next predicate (Y). We just retrieve it from the list of predicates(AdjY) from current position posY
+        x = (int) adjY.findListIndex(posY)+1; // get the next subject (X). We just retrieve it by knowing the ordinal number of the list associated to the predicate position posY (that is, if posY is the 14th list, then the subject is ID=14).
 
-        nextY = adjY.last(x-1)+1;
-        nextZ = adjZ.last(posY)+1;
+        nextY = adjY.last(x-1)+1; // nextY stores in which position (in AdjY) ends the list of predicates associated with the current subject (X)
+        nextZ = adjZ.last(posY)+1; // nextZ stores in which position (in adjZ) ends the list of objects associated with the current subject,predicate (in position posY) 
 	}
 
-	/* (non-Javadoc)
-	 * @see hdt.iterator.IteratorTripleID#estimatedNumResults()
-	 */
+	
 	@Override
 	public long estimatedNumResults() {
-		return maxZ-minZ;
+		return maxZ-minZ; // the results of the query are found in the list of objects (AdjZ) between maxZ and minZ positions.
 	}
 
 	/* (non-Javadoc)
@@ -262,4 +267,13 @@ public class BitmapTriplesIterator implements IteratorTripleID {
 	public void remove() {
 		throw new UnsupportedOperationException();
 	}
+	
+	@Override
+	 public long getNextTriplePosition() {
+	 	return posZ;
+	 }
+	@Override
+	 public long getPreviousTriplePosition() {
+	 	return posZ-1;
+	 }
 }

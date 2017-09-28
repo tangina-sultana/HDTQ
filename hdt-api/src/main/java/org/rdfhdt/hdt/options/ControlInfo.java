@@ -42,6 +42,8 @@ public interface ControlInfo extends HDTOptions {
 		HEADER,
 		DICTIONARY,
 		TRIPLES,
+		ANNOTATED_GRAPHS,
+		ANNOTATED_TRIPLES,
 		INDEX
 	}
 	

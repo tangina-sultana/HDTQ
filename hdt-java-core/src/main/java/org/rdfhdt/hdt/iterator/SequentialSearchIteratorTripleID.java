@@ -39,10 +39,12 @@ import org.rdfhdt.hdt.triples.TripleID;
  *
  */
 public class SequentialSearchIteratorTripleID implements IteratorTripleID {
-	private TripleID pattern, nextTriple, previousTriple, returnTriple;
+	protected TripleID pattern, nextTriple, previousTriple, returnTriple;
 	IteratorTripleID iterator;
 	boolean hasMoreTriples, hasPreviousTriples;
 	boolean goingUp;
+	
+	protected SequentialSearchIteratorTripleID() {}
 	
 	public SequentialSearchIteratorTripleID(TripleID pattern, IteratorTripleID other) {
 		this.pattern = pattern;
@@ -197,5 +199,12 @@ public class SequentialSearchIteratorTripleID implements IteratorTripleID {
 		throw new UnsupportedOperationException();
 	}
 	
-	
+	@Override
+	public long getNextTriplePosition() {
+		return iterator.getNextTriplePosition();
+	}
+	@Override
+	public long getPreviousTriplePosition() {
+		return iterator.getPreviousTriplePosition();
+	}
 }

@@ -31,6 +31,7 @@ import java.io.InputStream;
 
 import org.rdfhdt.hdt.enums.RDFNotation;
 import org.rdfhdt.hdt.exceptions.ParserException;
+import org.rdfhdt.hdt.quads.QuadString;
 import org.rdfhdt.hdt.triples.TripleString;
 
 /**
@@ -42,6 +43,7 @@ import org.rdfhdt.hdt.triples.TripleString;
 public interface RDFParserCallback {
 	interface RDFCallback {
 		void processTriple(TripleString triple, long pos);
+		void processQuad(QuadString quad, long pos);
 	}
 	
 	void doParse(String fileName, String baseUri, RDFNotation notation, RDFCallback callback) throws ParserException;

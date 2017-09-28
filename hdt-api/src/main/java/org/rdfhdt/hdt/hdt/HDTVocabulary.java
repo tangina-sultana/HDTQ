@@ -54,6 +54,7 @@ public class HDTVocabulary {
 	public static final String VOID_BASE ="<http://rdfs.org/ns/void#";
 	public static final String VOID_DATASET = VOID_BASE + "Dataset>";
 	public static final String VOID_TRIPLES = VOID_BASE + "triples>";
+	public static final String VOID_GRAPHS = VOID_BASE + "graphs>";
 	public static final String VOID_ENTITIES = VOID_BASE +"entities>";
 	public static final String VOID_CLASSES = VOID_BASE +"classes>";
 	public static final String VOID_PROPERTIES = VOID_BASE +"properties>";
@@ -115,6 +116,12 @@ public class HDTVocabulary {
 
 	// Bitmaps
 	public static final String BITMAP_TYPE_PLAIN = HDT_BITMAP_BASE+"Plain>";
+	public static final String BITMAP_TYPE_ROARING = HDT_BITMAP_BASE+"Roaring>";
+	
+	// Graphs
+	public static final String ANNOTATED_TRIPLES = HDT_BASE+"AT>";
+	public static final String ANNOTATED_GRAPHS = HDT_BASE+"AG>";
+	public static final String ANNOTATION_MODE = HDT_BASE+"AnnotationMode>";
 	
     // Misc
 	public static final String ORIGINAL_SIZE = HDT_BASE+"originalSize>";

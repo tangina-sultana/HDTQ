@@ -384,6 +384,11 @@ public class Bitmap375 extends Bitmap64 implements ModifiableBitmap {
 		return ((long)blockIdx) * W + bitpos - 1;
 	}
 	
+	@Override
+	public long selectPrev1(long start) {
+		return select1(rank1(start));	//TODO: Improve this implementation
+	}
+	
 	/* (non-Javadoc)
 	 * @see hdt.compact.bitmap.Bitmap#countOnes()
 	 */

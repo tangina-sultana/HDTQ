@@ -52,4 +52,6 @@ public interface RDFAccess {
 	 * @throws NotFoundException 
 	 */
 	IteratorTripleString search(CharSequence subject, CharSequence predicate, CharSequence object) throws NotFoundException;
+	
+	IteratorTripleString search(CharSequence subject, CharSequence predicate, CharSequence object, CharSequence graph) throws NotFoundException;
 }

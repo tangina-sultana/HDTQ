@@ -30,7 +30,9 @@ package org.rdfhdt.hdt.triples;
 import java.io.Closeable;
 
 import org.rdfhdt.hdt.enums.TripleComponentOrder;
+import org.rdfhdt.hdt.graphs.GraphInformationImpl;
 import org.rdfhdt.hdt.listener.ProgressListener;
+import org.rdfhdt.hdt.quads.QuadID;
 
 /**
  * Interface for TempTriples implementation.
@@ -48,6 +50,16 @@ public interface TempTriples extends TriplesPrivate, Closeable {
 	 * @return
 	 */
 	boolean insert(int subject, int predicate, int object);
+	
+	/**
+	 * Add one triple
+	 * @param subject
+	 * @param predicate
+	 * @param object
+	 * @param graph
+	 * @return
+	 */
+	boolean insert(int subject, int predicate, int object, int graph);
 	
 	/**
 	 * Adds one or more triples
@@ -73,6 +85,7 @@ public interface TempTriples extends TriplesPrivate, Closeable {
 	 * @return
 	 */
 	boolean update(TripleID triple, int subj, int pred, int obj);
+	boolean update(QuadID triple, int subj, int pred, int obj, int graph);
 
 	/**
 	 * Deletes one or more triples according to a pattern
@@ -91,6 +104,7 @@ public interface TempTriples extends TriplesPrivate, Closeable {
 	void sort(ProgressListener listener);
 
 	void removeDuplicates(ProgressListener listener);
+	void removeDuplicates(GraphInformationImpl graphs, ProgressListener listener);
 	
 	/**
 	 * Sets a type of order(TripleComponentOrder)
@@ -114,4 +128,5 @@ public interface TempTriples extends TriplesPrivate, Closeable {
 	 * Load triples from another instance.
 	 */
 	void load(Triples triples, ProgressListener listener);
+
 }
