@@ -24,7 +24,8 @@ You can also run mvn assembly:single under hdt-java-package to generate a distri
 
 ## Usage
 
-Examples on how to use this library are provided in the org.rdfhdt.hdt.example package of the hdt-java-core module.
+Examples on how to use this library are provided in the org.rdfhdt.hdt.example package of the hdt-java-core module (in src/main/java).
+To test the functionality, one can execute the JUnit tests in org.rdfhdt.hdt.graphs package of the hdt-java-core module (in src/test/java).
 
 
 ## License
